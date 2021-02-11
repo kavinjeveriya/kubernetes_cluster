@@ -1,0 +1,36 @@
+---
+# tasks file for test
+- name: "installing docker"
+  package:
+          name: "docker"
+          state: present
+
+- name: "creating a file and changing the driver of docker from cgroupdriver to systemd"
+  copy:
+          dest: /etc/docker/daemon.json
+          content: |
+                  {
+                          "exec-opts":["native.cgroupdriver=systemd"]
+                  }
+
+- name: "starting and enabling docker"
+  service:
+          enabled: yes
+          name: docker
+          state: started
+  notify:
+          - configuring yum repo for kubeadm,kubelet & kubectl
+          - installing kubeadm,kubelet & kubectl
+          - starting and enabling kubelet service
+          - pulling config images
+          - installing iproute-tc
+          - change the value bridge-nf-call-iptables
+          - copying flannel-cfg file
+          - initializing kubeadm and config master as a client
+          - storing token value
+          - fetch the token value file from masterhost to localhost
+          - config kubernetes config file 
+          - restart system
+          - copy token file from local host to slave host
+          - converting token file to execution mode and then execute it
+ 

@@ -1,0 +1,100 @@
+---
+# handlers file for test
+- name: "configuring yum repo for kubeadm,kubelet & kubectl"
+  yum_repository:
+       name: "kubernetes"
+       description: "repo for kubernetes"
+       baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+       enabled: yes
+       repo_gpgcheck: yes
+       gpgcheck: yes
+       gpgkey:
+       -  "https://packages.cloud.google.com/yum/doc/yum-key.gpg"
+       -  "https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg"
+  
+
+- name: "installing kubeadm,kubelet & kubectl"
+  yum:
+        name: ["kubeadm","kubelet","kubectl"]
+        disable_excludes: "kubernetes"
+        state: present
+
+- name: "starting and enabling kubelet service"
+  service:
+        enabled: yes
+        name: "kubelet"
+        state: started
+
+- name: "pulling config images"
+  shell:
+        cmd: "kubeadm config images pull"
+
+- name: "installing iproute-tc"
+  package:
+       name: "iproute-tc"
+       state: present
+
+- name: "change the value bridge-nf-call-iptables"
+  lineinfile:
+       path: /proc/sys/net/bridge/bridge-nf-call-iptables
+       line: "1"
+       state: present
+  when: "'tag_name_master' in group_names"
+
+- name: "copying flannel-cfg file"
+  template:
+          src: /flannel-cfg/flannel.yml
+          dest: /root/flannel.yml
+
+- name: "initializing kubeadm and config master as a client"
+  shell:
+       cmd: "{{ item }}"
+       chdir: /root
+  with_items:
+  - "kubeadm init --pod-network-cidr={{ network_ip }} --ignore-preflight-errors=NumCPU --ignore-preflight-errors=Mem"
+  - "mkdir -p $HOME/.kube"
+  - "sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config"
+  - "sudo chown $(id -u):$(id -g) $HOME/.kube/config"
+  - "kubectl apply -f flannel.yml"
+  when: "'tag_name_master' in group_names"
+
+- name: "storing token value"
+  shell:
+          cmd: "kubeadm token create --print-join-command > /root/token.py"
+  when: "'tag_name_master' in group_names"
+
+- name: "fetch the token value file from masterhost to localhost"
+  fetch:
+          src: /root/token.py
+          dest: /token/
+          flat: yes
+  when: "'tag_name_master' in group_names"
+
+- name: "config kubernetes config file"
+  copy:
+       dest: "/etc/sysctl.d/k8s.conf"
+       content: |
+           net.bridge.bridge-nf-call-ip6tables=1
+           net.bridge.bridge-nf-call-iptables=1
+  when: "'tag_name_slave' in group_names"
+
+- name: "restart system"
+  shell:
+      cmd: "sysctl --system"
+  when: "'tag_name_slave' in group_names"
+
+- name: "copy token file from local host to slave host"
+  copy:
+          src: /token/token.py
+          dest: /etc/
+  when: "'tag_name_slave' in group_names"
+
+- name: "converting token file to execution mode and then execute it"
+  shell: 
+          cmd: "{{ item }}"
+          chdir: /etc/
+  with_items:
+          - "chmod +x token.py"
+          - "./token.py"
+  when: "'tag_name_slave' in group_names"
+
