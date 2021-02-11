@@ -1,0 +1,50 @@
+- hosts: localhost
+  vars:
+          instance_name_tag: "master"
+          no_of_instances: "1"
+        
+  vars_prompt:
+          - name: choice
+            prompt: "---Do You Want a master node instance,true or false---"
+            private: no
+  roles:
+  - name: Ec2 role to launch a master server
+    role: "ec2"
+    when: choice|bool == true
+
+- hosts: localhost
+  vars:
+          instance_name_tag: "slave"
+  vars_prompt:
+          - name: choice
+            prompt: "---Do You Want a slave node instances,true or false---"
+            private: no
+          - name: no_of_instances
+            prompt: "---How many slave node instances you want in Numbers,eg.1.---"
+            private: no
+
+  roles:
+  - name: Ec2 role to launch a master server
+    role: "ec2"
+    when: choice|bool == true
+  
+  tasks:
+  - name: waiting for instnaces ssh
+    command: sleep 30
+    when: choice|bool == true
+
+
+  - name: refresh inventory
+    meta: refresh_inventory
+
+
+- hosts: tag_name_master
+  roles:
+  - name: "role for master"
+    role: "k8s_cluster"
+
+- hosts: tag_name_slave
+  roles:
+  - name: "role for master"
+    role: "k8s_cluster"
+
