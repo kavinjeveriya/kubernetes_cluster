@@ -1,0 +1,12 @@
+---
+# vars file for ec2
+key: "your_key_name"
+instance_type: "t2.micro"
+os_image: "ami-08e0ca9924195beba"
+instance_country_tag: "IN"
+instance_region_tag: "ap"
+vpc_subnet: "subnet-0563d68cd56a901fb"
+region_name: "ap-south-1"
+security_group_id: "sg-0bea222c4ee2c82e5"
+aws_access_key: "yourkey"
+aws_secret_key: "yourkey"

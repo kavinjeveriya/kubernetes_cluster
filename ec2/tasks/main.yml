@@ -1,0 +1,24 @@
+---
+# tasks file for ec2
+- name: launching a ec2 instance on aws
+  ec2:
+       key_name: "{{ key }}"
+       instance_type: "{{ instance_type }}"
+       image: "{{ os_image }}"
+       wait: yes
+       count: "{{ no_of_instances }}"
+       instance_tags:
+            name: "{{ instance_name_tag }}"
+            country: "{{ instance_country_tag }}"
+            region: "{{ instance_region_tag }}"
+       vpc_subnet_id: "{{ vpc_subnet }}"
+       region: "{{ region_name }}"
+       assign_public_ip: yes
+       state: present
+       group_id: "{{ security_group_id }}"
+       aws_access_key: "{{ aws_access_key }}"
+       aws_secret_key: "{{ aws_secret_key }}"
+  register: data
+- name: debug
+  debug:
+       var: data
